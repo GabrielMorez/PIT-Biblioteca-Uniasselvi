@@ -29,6 +29,21 @@ Automatizar o controle de empréstimos e devoluções de livros da biblioteca ac
 - RNF03: O sistema deve possuir interface responsiva, permitindo utilização adequada em dispositivos desktop e mobile.
 
 **Casos de uso / Funcionalidades:**
+- F01 – Busca de livros
+   - Permite ao aluno pesquisar livros disponíveis na biblioteca utilizando filtros como título, autor ou ISBN.
+   --> Relacionamento: RF01
+- F02 – Reserva de livros
+   - Permite que alunos reservem livros quando não houver exemplares disponíveis.
+   --> Relacionamento: RF03
+- F03 – Histórico de empréstimos
+   - Permite ao aluno visualizar todos os seus empréstimos realizados.
+   --> Relacionamento: RF03, RF04
+- F04 – Dashboard administrativo
+   - Permite ao bibliotecário visualizar estatísticas de empréstimos e atrasos.
+   --> Relacionamento: RF06
+- F05 – Notificação de devolução
+   - O sistema envia lembretes sobre datas de devolução próximas.
+   --> Relacionamento: RF04
 
 **DoR (Definition of Ready):**
 
