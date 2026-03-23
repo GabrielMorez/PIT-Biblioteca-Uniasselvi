@@ -34,16 +34,19 @@ Automatizar o controle de empréstimos e devoluções de livros da biblioteca ac
    --> Relacionamento: RF01
 - F02 – Reserva de livros
    - Permite que alunos reservem livros quando não houver exemplares disponíveis.
-   --> Relacionamento: RF03
+   - *Relacionamento: RF03*
 - F03 – Histórico de empréstimos
    - Permite ao aluno visualizar todos os seus empréstimos realizados.
-   --> Relacionamento: RF03, RF04
-- F04 – Dashboard administrativo
+   - *Relacionamento: RF03, RF04*
+- F04 – Devolução do livro
+   - Permite ao aluno devolver o livro, gerar custos se atraso.
+   - *Relacionamento: RF04*
+- F05 – Dashboard administrativo (opcional)
    - Permite ao bibliotecário visualizar estatísticas de empréstimos e atrasos.
-   --> Relacionamento: RF06
-- F05 – Notificação de devolução
+   - *Relacionamento: RF06*
+- F06 – Notificação de devolução (opcional)
    - O sistema envia lembretes sobre datas de devolução próximas.
-   --> Relacionamento: RF04
+   - *Relacionamento: RF04*
 
 **DoR (Definition of Ready):**
 
