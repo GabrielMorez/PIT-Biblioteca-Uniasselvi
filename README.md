@@ -31,7 +31,7 @@ Automatizar o controle de empréstimos e devoluções de livros da biblioteca ac
 **Casos de uso / Funcionalidades:**
 - F01 – Busca de livros
    - Permite ao aluno pesquisar livros disponíveis na biblioteca utilizando filtros como título, autor ou ISBN.
-   --> Relacionamento: RF01
+   - *Relacionamento: RF01*
 - F02 – Reserva de livros
    - Permite que alunos reservem livros quando não houver exemplares disponíveis.
    - *Relacionamento: RF03*
