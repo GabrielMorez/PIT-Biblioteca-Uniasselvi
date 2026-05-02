@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biblioteca — Painel Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+
+<!-- Modal Livro -->
+<div class="modal-overlay" id="modal-livro">
+  <div class="modal">
+    <h3 id="modal-livro-titulo">Cadastrar Livro</h3>
+    <input type="hidden" id="livro-id" />
+    <div class="form-row">
+      <div class="form-group"><label>ISBN *</label><input type="text" id="livro-isbn" /></div>
+      <div class="form-group"><label>Ano *</label><input type="number" id="livro-ano" /></div>
+    </div>
+    <div class="form-group"><label>Título *</label><input type="text" id="livro-titulo-input" /></div>
+    <div class="form-row">
+      <div class="form-group"><label>Autor *</label><input type="text" id="livro-autor" /></div>
+      <div class="form-group"><label>Editora</label><input type="text" id="livro-editora" /></div>
+    </div>
+    <div class="form-group"><label>Qtd. Exemplares *</label><input type="number" id="livro-qtd" min="1" value="1" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fecharModal('modal-livro')">Cancelar</button>
+      <button class="btn btn-accent"  onclick="salvarLivro()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Empréstimo -->
+<div class="modal-overlay" id="modal-emprestimo">
+  <div class="modal">
+    <h3>Registrar Empréstimo</h3>
+    <div class="form-group"><label>Aluno *</label><select id="emp-aluno"></select></div>
+    <div class="form-group"><label>Livro *</label><select id="emp-livro"></select></div>
+    <div class="form-group"><label>Data Prevista de Devolução *</label><input type="date" id="emp-data-prev" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fecharModal('modal-emprestimo')">Cancelar</button>
+      <button class="btn btn-accent"  onclick="salvarEmprestimo()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Config Multa -->
+<div class="modal-overlay" id="modal-multa">
+  <div class="modal">
+    <h3>Configuração de Multa</h3>
+    <div class="form-group"><label>Valor Diário (R$) *</label><input type="number" step="0.01" id="multa-diario" /></div>
+    <div class="form-group"><label>Teto Máximo (R$) *</label><input type="number" step="0.01" id="multa-teto" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fecharModal('modal-multa')">Cancelar</button>
+      <button class="btn btn-accent"  onclick="salvarConfigMulta()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">📚 Biblioteca<small>Painel Admin</small></div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showSection('dashboard')"   data-section="dashboard"><span class="icon">🏠</span><span>Dashboard</span></div>
+      <div class="nav-item"        onclick="showSection('livros')"       data-section="livros"><span class="icon">📖</span><span>Livros</span></div>
+      <div class="nav-item"        onclick="showSection('emprestimos')"  data-section="emprestimos"><span class="icon">🔖</span><span>Empréstimos</span></div>
+      <div class="nav-item"        onclick="showSection('relatorio')"    data-section="relatorio"><span class="icon">📊</span><span>Relatório</span></div>
+      <div class="nav-item"        onclick="showSection('alunos')"       data-section="alunos"><span class="icon">👥</span><span>Alunos</span></div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><strong>Bibliotecário</strong>admin@biblioteca.com</div>
+      <button class="btn btn-outline btn-sm" onclick="sair()">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <!-- Dashboard -->
+    <section class="page-section active" id="section-dashboard">
+      <div class="page-header"><h1>Dashboard</h1><p>Visão geral do sistema</p></div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total de Livros</div><div class="stat-value" id="stat-livros">—</div></div>
+        <div class="stat-card warning"><div class="stat-label">Empréstimos Ativos</div><div class="stat-value" id="stat-ativos">—</div></div>
+        <div class="stat-card danger"><div class="stat-label">Em Atraso</div><div class="stat-value" id="stat-atraso">—</div></div>
+        <div class="stat-card success"><div class="stat-label">Devolvidos (30d)</div><div class="stat-value" id="stat-devolvidos">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Empréstimos Recentes</h3></div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Aluno</th><th>Livro</th><th>Empréstimo</th><th>Devolução Prevista</th><th>Status</th></tr></thead>
+            <tbody id="tbody-recentes"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Livros -->
+    <section class="page-section" id="section-livros">
+      <div class="page-header"><h1>Acervo de Livros</h1><p>Gerencie o catálogo da biblioteca</p></div>
+      <div class="card">
+        <div class="card-header">
+          <div class="search-bar" style="margin:0;flex:1;">
+            <input type="text" id="busca-titulo" placeholder="Buscar por título..." oninput="carregarLivros()" />
+            <input type="text" id="busca-autor"  placeholder="Autor..."             oninput="carregarLivros()" />
+            <input type="text" id="busca-isbn"   placeholder="ISBN..."              oninput="carregarLivros()" />
+          </div>
+          <button class="btn btn-accent btn-sm" onclick="abrirModalLivro()" style="margin-left:12px;white-space:nowrap;">+ Novo Livro</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>ISBN</th><th>Título</th><th>Autor</th><th>Editora</th><th>Ano</th><th>Exemplares</th><th>Disponíveis</th><th>Ações</th></tr></thead>
+            <tbody id="tbody-livros"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empréstimos -->
+    <section class="page-section" id="section-emprestimos">
+      <div class="page-header"><h1>Empréstimos</h1><p>Registre e gerencie empréstimos</p></div>
+      <div class="card">
+        <div class="card-header">
+          <select id="filtro-emprestimo" onchange="carregarEmprestimos()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;background:var(--bg-card);">
+            <option value="">Todos</option>
+            <option value="true">Apenas Ativos</option>
+          </select>
+          <button class="btn btn-accent btn-sm" onclick="abrirModalEmprestimo()" style="margin-left:12px;white-space:nowrap;">+ Novo Empréstimo</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Aluno</th><th>Livro</th><th>Empréstimo</th><th>Prev. Devolução</th><th>Devolução</th><th>Atraso</th><th>Multa</th><th>Status</th><th>Ação</th></tr></thead>
+            <tbody id="tbody-emprestimos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Relatório -->
+    <section class="page-section" id="section-relatorio">
+      <div class="page-header"><h1>Relatório de Empréstimos</h1><p>Analise empréstimos por período</p></div>
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="form-group" style="margin:0;flex:1;min-width:160px;"><label>Data Início</label><input type="date" id="rel-inicio" /></div>
+          <div class="form-group" style="margin:0;flex:1;min-width:160px;"><label>Data Fim</label><input type="date" id="rel-fim" /></div>
+          <button class="btn btn-accent"  onclick="gerarRelatorio()">Gerar Relatório</button>
+          <button class="btn btn-outline" onclick="abrirModalMulta()">⚙ Configurar Multa</button>
+        </div>
+      </div>
+      <div id="relatorio-resultado" style="display:none;">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="rel-total">0</div></div>
+          <div class="stat-card warning"><div class="stat-label">Ativos</div><div class="stat-value" id="rel-ativos">0</div></div>
+          <div class="stat-card success"><div class="stat-label">Devolvidos</div><div class="stat-value" id="rel-devolvidos">0</div></div>
+          <div class="stat-card danger"><div class="stat-label">Atrasados</div><div class="stat-value" id="rel-atrasados">0</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Detalhamento</h3></div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Aluno</th><th>Livro</th><th>Empréstimo</th><th>Prev. Devolução</th><th>Devolução</th><th>Atraso</th><th>Multa</th><th>Status</th></tr></thead>
+              <tbody id="tbody-relatorio"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alunos -->
+    <section class="page-section" id="section-alunos">
+      <div class="page-header"><h1>Alunos Cadastrados</h1></div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Nome</th><th>Documento</th><th>E-mail</th><th>Telefone</th><th>Cadastro</th></tr></thead>
+            <tbody id="tbody-alunos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+  redirectIfNotAuth();
+  if (getRole() !== 'bibliotecario') window.location.href = '../pages/aluno.html';
+
+  function showSection(name) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`section-${name}`).classList.add('active');
+    document.querySelector(`[data-section="${name}"]`).classList.add('active');
+    const map = { dashboard: carregarDashboard, livros: carregarLivros, emprestimos: carregarEmprestimos, alunos: carregarAlunos };
+    if (map[name]) map[name]();
+  }
+
+  function sair() { clearSession(); window.location.href = '../index.html'; }
+  function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+  function abrirModal(id)  { document.getElementById(id).classList.add('open'); }
+
+  function statusBadge(e) {
+    const agora = new Date();
+    if (e.data_devolucao) return Number(e.dias_atraso) > 0 ? '<span class="badge badge-warning">Devolvido c/ Atraso</span>' : '<span class="badge badge-success">Devolvido</span>';
+    if (new Date(e.data_prevista_devolucao) < agora) return '<span class="badge badge-danger">Em Atraso</span>';
+    return '<span class="badge badge-accent">Ativo</span>';
+  }
+
+  async function carregarDashboard() {
+    showLoading(true);
+    try {
+      const [livros, emprestimos] = await Promise.all([apiFetch('/livros'), apiFetch('/emprestimos')]);
+      const agora = new Date();
+      const ativos = emprestimos.filter(e => !e.data_devolucao);
+      const inicio30 = new Date(); inicio30.setDate(inicio30.getDate() - 30);
+      document.getElementById('stat-livros').textContent     = livros.length;
+      document.getElementById('stat-ativos').textContent     = ativos.length;
+      document.getElementById('stat-atraso').textContent     = ativos.filter(e => new Date(e.data_prevista_devolucao) < agora).length;
+      document.getElementById('stat-devolvidos').textContent = emprestimos.filter(e => e.data_devolucao && new Date(e.data_devolucao) >= inicio30).length;
+      document.getElementById('tbody-recentes').innerHTML = emprestimos.slice(0, 8).map(e => `
+        <tr><td>${e.aluno_nome}</td><td>${e.livro_titulo}</td><td>${formatDate(e.data_emprestimo)}</td><td>${formatDate(e.data_prevista_devolucao)}</td><td>${statusBadge(e)}</td></tr>`
+      ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Nenhum empréstimo</td></tr>';
+    } catch { showToast('Erro ao carregar dashboard', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function carregarLivros() {
+    const params = new URLSearchParams();
+    const t = document.getElementById('busca-titulo')?.value; if (t) params.set('titulo', t);
+    const a = document.getElementById('busca-autor')?.value;  if (a) params.set('autor', a);
+    const i = document.getElementById('busca-isbn')?.value;   if (i) params.set('isbn', i);
+    try {
+      const livros = await apiFetch('/livros?' + params);
+      document.getElementById('tbody-livros').innerHTML = livros.map(l => `
+        <tr>
+          <td><code style="font-size:12px">${l.isbn}</code></td>
+          <td><strong>${l.titulo}</strong></td><td>${l.autor}</td><td>${l.editora || '—'}</td><td>${l.ano}</td>
+          <td>${l.quantidade_exemplares}</td>
+          <td><span class="badge ${l.exemplares_disponiveis > 0 ? 'badge-success' : 'badge-danger'}">${l.exemplares_disponiveis}</span></td>
+          <td style="display:flex;gap:6px;">
+            <button class="btn btn-outline btn-sm" onclick="editarLivro(${l.id})">Editar</button>
+            <button class="btn btn-danger btn-sm"  onclick="excluirLivro(${l.id})">Excluir</button>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Nenhum livro</td></tr>';
+    } catch { showToast('Erro ao carregar livros', 'error'); }
+  }
+
+  function abrirModalLivro(livro = null) {
+    document.getElementById('livro-id').value            = livro?.id || '';
+    document.getElementById('modal-livro-titulo').textContent = livro ? 'Editar Livro' : 'Cadastrar Livro';
+    document.getElementById('livro-isbn').value          = livro?.isbn || '';
+    document.getElementById('livro-titulo-input').value  = livro?.titulo || '';
+    document.getElementById('livro-autor').value         = livro?.autor || '';
+    document.getElementById('livro-editora').value       = livro?.editora || '';
+    document.getElementById('livro-ano').value           = livro?.ano || new Date().getFullYear();
+    document.getElementById('livro-qtd').value           = livro?.quantidade_exemplares || 1;
+    abrirModal('modal-livro');
+  }
+
+  async function editarLivro(id) {
+    try { abrirModalLivro(await apiFetch(`/livros/${id}`)); } catch { showToast('Erro ao carregar livro', 'error'); }
+  }
+
+  async function salvarLivro() {
+    const id = document.getElementById('livro-id').value;
+    const payload = {
+      isbn:                  document.getElementById('livro-isbn').value.trim(),
+      titulo:                document.getElementById('livro-titulo-input').value.trim(),
+      autor:                 document.getElementById('livro-autor').value.trim(),
+      editora:               document.getElementById('livro-editora').value.trim() || undefined,
+      ano:                   Number(document.getElementById('livro-ano').value),
+      quantidade_exemplares: Number(document.getElementById('livro-qtd').value),
+    };
+    showLoading(true);
+    try {
+      id ? await apiFetch(`/livros/${id}`, { method: 'PUT',  body: JSON.stringify(payload) })
+         : await apiFetch('/livros',        { method: 'POST', body: JSON.stringify(payload) });
+      showToast(id ? 'Livro atualizado!' : 'Livro cadastrado!');
+      fecharModal('modal-livro'); carregarLivros();
+    } catch (e) { showToast(e.message || 'Erro ao salvar livro', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function excluirLivro(id) {
+    if (!confirm('Deseja excluir este livro?')) return;
+    showLoading(true);
+    try { await apiFetch(`/livros/${id}`, { method: 'DELETE' }); showToast('Livro excluído!'); carregarLivros(); }
+    catch (e) { showToast(e.message || 'Erro ao excluir', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function carregarEmprestimos() {
+    const v = document.getElementById('filtro-emprestimo')?.value || '';
+    try {
+      const emprestimos = await apiFetch(`/emprestimos${v ? '?apenas_ativos=' + v : ''}`);
+      document.getElementById('tbody-emprestimos').innerHTML = emprestimos.map(e => `
+        <tr>
+          <td>${e.aluno_nome}</td><td>${e.livro_titulo}</td>
+          <td>${formatDate(e.data_emprestimo)}</td><td>${formatDate(e.data_prevista_devolucao)}</td><td>${formatDate(e.data_devolucao)}</td>
+          <td>${Number(e.dias_atraso) > 0 ? `<span class="badge badge-danger">${e.dias_atraso}d</span>` : '0'}</td>
+          <td>${Number(e.valor_multa) > 0 ? `<span style="color:var(--danger);font-weight:600">${formatCurrency(e.valor_multa)}</span>` : '—'}</td>
+          <td>${statusBadge(e)}</td>
+          <td>${!e.data_devolucao ? `<button class="btn btn-sm btn-accent" onclick="devolverEmprestimo(${e.id})">Devolver</button>` : '—'}</td>
+        </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">Nenhum empréstimo</td></tr>';
+    } catch { showToast('Erro ao carregar empréstimos', 'error'); }
+  }
+
+  async function abrirModalEmprestimo() {
+    try {
+      const [alunos, livros] = await Promise.all([apiFetch('/alunos'), apiFetch('/livros')]);
+      document.getElementById('emp-aluno').innerHTML = alunos.map(a => `<option value="${a.id}">${a.primeiro_nome} ${a.sobrenome}</option>`).join('');
+      document.getElementById('emp-livro').innerHTML = livros.filter(l => l.exemplares_disponiveis > 0).map(l => `<option value="${l.id}">${l.titulo} (${l.exemplares_disponiveis} disp.)</option>`).join('');
+      const d = new Date(); d.setDate(d.getDate() + 7);
+      document.getElementById('emp-data-prev').value = d.toISOString().split('T')[0];
+      abrirModal('modal-emprestimo');
+    } catch { showToast('Erro ao carregar dados', 'error'); }
+  }
+
+  async function salvarEmprestimo() {
+    const payload = {
+      id_aluno:               Number(document.getElementById('emp-aluno').value),
+      id_livro:               Number(document.getElementById('emp-livro').value),
+      data_prevista_devolucao: document.getElementById('emp-data-prev').value,
+    };
+    showLoading(true);
+    try { await apiFetch('/emprestimos', { method: 'POST', body: JSON.stringify(payload) }); showToast('Empréstimo registrado!'); fecharModal('modal-emprestimo'); carregarEmprestimos(); }
+    catch (e) { showToast(e.message || 'Erro ao registrar', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function devolverEmprestimo(id) {
+    if (!confirm('Confirmar devolução?')) return;
+    showLoading(true);
+    try {
+      const r = await apiFetch(`/emprestimos/${id}/devolver`, { method: 'PATCH' });
+      showToast(r.dias_atraso > 0 ? `Devolvido c/ atraso. Multa: ${formatCurrency(r.valor_multa)}` : 'Devolução registrada!', r.dias_atraso > 0 ? 'warning' : 'success');
+      carregarEmprestimos();
+    } catch (e) { showToast(e.message || 'Erro ao devolver', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function gerarRelatorio() {
+    const inicio = document.getElementById('rel-inicio').value;
+    const fim    = document.getElementById('rel-fim').value;
+    if (!inicio || !fim) { showToast('Informe o período.', 'error'); return; }
+    showLoading(true);
+    try {
+      const data = await apiFetch(`/emprestimos/relatorio?inicio=${inicio}&fim=${fim}`);
+      document.getElementById('rel-total').textContent      = data.totais.total;
+      document.getElementById('rel-ativos').textContent     = data.totais.ativos;
+      document.getElementById('rel-devolvidos').textContent = data.totais.devolvidos;
+      document.getElementById('rel-atrasados').textContent  = data.totais.atrasados;
+      document.getElementById('tbody-relatorio').innerHTML  = data.emprestimos.map(e => `
+        <tr>
+          <td>${e.aluno_nome}</td><td>${e.livro_titulo}</td>
+          <td>${formatDate(e.data_emprestimo)}</td><td>${formatDate(e.data_prevista_devolucao)}</td><td>${formatDate(e.data_devolucao)}</td>
+          <td>${Number(e.dias_atraso) > 0 ? e.dias_atraso + 'd' : '0'}</td><td>${formatCurrency(e.valor_multa)}</td><td>${statusBadge(e)}</td>
+        </tr>`).join('');
+      document.getElementById('relatorio-resultado').style.display = 'block';
+    } catch (e) { showToast(e.message || 'Erro ao gerar relatório', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function abrirModalMulta() {
+    try { const c = await apiFetch('/config/multa'); document.getElementById('multa-diario').value = c.valor_diario; document.getElementById('multa-teto').value = c.teto_multa; abrirModal('modal-multa'); }
+    catch { showToast('Erro ao carregar config', 'error'); }
+  }
+
+  async function salvarConfigMulta() {
+    showLoading(true);
+    try { await apiFetch('/config/multa', { method: 'PUT', body: JSON.stringify({ valor_diario: Number(document.getElementById('multa-diario').value), teto_multa: Number(document.getElementById('multa-teto').value) }) }); showToast('Configuração salva!'); fecharModal('modal-multa'); }
+    catch (e) { showToast(e.message || 'Erro', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function carregarAlunos() {
+    try {
+      const alunos = await apiFetch('/alunos');
+      document.getElementById('tbody-alunos').innerHTML = alunos.map(a => `
+        <tr><td><strong>${a.primeiro_nome} ${a.sobrenome}</strong></td><td>${a.documento}</td><td>${a.email}</td><td>${a.telefone || '—'}</td><td>${formatDate(a.criado_em)}</td></tr>`
+      ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Nenhum aluno</td></tr>';
+    } catch { showToast('Erro ao carregar alunos', 'error'); }
+  }
+
+  carregarDashboard();
+  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+</script>
+</body>
+</html>

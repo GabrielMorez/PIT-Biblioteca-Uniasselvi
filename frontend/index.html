@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biblioteca — Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+
+<div class="auth-wrapper">
+  <div class="auth-panel">
+    <div class="auth-panel-content">
+      <div class="logo">📚 Biblioteca</div>
+      <h2 style="color:#fff;margin-bottom:12px;font-size:1.6rem;">Sistema de Controle de Empréstimos</h2>
+      <p>Gerencie o acervo, empréstimos e devoluções da biblioteca acadêmica com praticidade e segurança.</p>
+    </div>
+    <div class="auth-ornament">§</div>
+  </div>
+
+  <div class="auth-form-area">
+    <div class="auth-card">
+      <div class="tab-group" style="margin-bottom:28px;">
+        <button class="tab-btn active" id="tab-login"   onclick="showTab('login')">Entrar</button>
+        <button class="tab-btn"        id="tab-cadastro" onclick="showTab('cadastro')">Cadastrar-se</button>
+      </div>
+
+      <!-- Login -->
+      <div id="form-login">
+        <h2>Bem-vindo de volta</h2>
+        <p class="subtitle">Acesse com seu e-mail e senha</p>
+        <div class="form-group"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" /></div>
+        <div class="form-group"><label>Senha</label><input type="password" id="login-senha" placeholder="••••••••" /></div>
+        <button class="btn btn-primary btn-full" onclick="fazerLogin()">Entrar</button>
+        <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-muted);">
+          Admin padrão: <strong>admin@biblioteca.com</strong> / <strong>admin123</strong>
+        </p>
+      </div>
+
+      <!-- Cadastro -->
+      <div id="form-cadastro" style="display:none;">
+        <h2>Criar conta</h2>
+        <p class="subtitle">Preencha seus dados para se cadastrar</p>
+        <div class="form-row">
+          <div class="form-group"><label>Primeiro Nome</label><input type="text" id="cad-nome" placeholder="João" /></div>
+          <div class="form-group"><label>Sobrenome</label><input type="text" id="cad-sobrenome" placeholder="Silva" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>CPF / Documento</label><input type="text" id="cad-documento" placeholder="000.000.000-00" /></div>
+          <div class="form-group"><label>Telefone</label><input type="text" id="cad-telefone" placeholder="(47) 99999-9999" /></div>
+        </div>
+        <div class="form-group"><label>E-mail</label><input type="email" id="cad-email" placeholder="seu@email.com" /></div>
+        <div class="form-group"><label>Senha</label><input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres" /></div>
+        <button class="btn btn-accent btn-full" onclick="fazerCadastro()">Criar Conta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  redirectIfAuth();
+
+  function showTab(tab) {
+    document.getElementById('form-login').style.display    = tab === 'login'   ? 'block' : 'none';
+    document.getElementById('form-cadastro').style.display = tab === 'cadastro' ? 'block' : 'none';
+    document.getElementById('tab-login').classList.toggle('active',   tab === 'login');
+    document.getElementById('tab-cadastro').classList.toggle('active', tab === 'cadastro');
+  }
+
+  async function fazerLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const senha = document.getElementById('login-senha').value;
+    if (!email || !senha) { showToast('Preencha e-mail e senha.', 'error'); return; }
+    showLoading(true);
+    try {
+      const data = await apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, senha }) });
+      setSession(data);
+      showToast('Login realizado!');
+      setTimeout(() => {
+        window.location.href = data.role === 'bibliotecario' ? 'pages/admin.html' : 'pages/aluno.html';
+      }, 500);
+    } catch (e) {
+      showToast(e.message || 'Erro ao fazer login.', 'error');
+    } finally { showLoading(false); }
+  }
+
+  async function fazerCadastro() {
+    const payload = {
+      primeiro_nome: document.getElementById('cad-nome').value.trim(),
+      sobrenome:     document.getElementById('cad-sobrenome').value.trim(),
+      documento:     document.getElementById('cad-documento').value.trim(),
+      telefone:      document.getElementById('cad-telefone').value.trim(),
+      email:         document.getElementById('cad-email').value.trim(),
+      senha:         document.getElementById('cad-senha').value,
+    };
+    if (!payload.primeiro_nome || !payload.sobrenome || !payload.documento || !payload.email || !payload.senha) {
+      showToast('Preencha todos os campos obrigatórios.', 'error'); return;
+    }
+    showLoading(true);
+    try {
+      const data = await apiFetch('/auth/cadastro', { method: 'POST', body: JSON.stringify(payload) });
+      setSession(data);
+      showToast('Cadastro realizado com sucesso!');
+      setTimeout(() => { window.location.href = 'pages/aluno.html'; }, 600);
+    } catch (e) {
+      showToast(e.message || 'Erro ao cadastrar.', 'error');
+    } finally { showLoading(false); }
+  }
+
+  document.addEventListener('keypress', e => { if (e.key === 'Enter') fazerLogin(); });
+</script>
+</body>
+</html>

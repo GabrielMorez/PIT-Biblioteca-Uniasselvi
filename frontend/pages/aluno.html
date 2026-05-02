@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biblioteca — Área do Aluno</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="loading-overlay"><div class="spinner"></div></div>
+<div id="toast-container"></div>
+
+<!-- Modal Empréstimo -->
+<div class="modal-overlay" id="modal-emprestimo">
+  <div class="modal">
+    <h3>Solicitar Empréstimo</h3>
+    <div class="form-group"><label>Livro Selecionado</label><input type="text" id="modal-livro-nome" readonly style="background:var(--bg);" /><input type="hidden" id="modal-livro-id" /></div>
+    <div class="form-group"><label>Data Prevista de Devolução *</label><input type="date" id="modal-data-prev" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fecharModal('modal-emprestimo')">Cancelar</button>
+      <button class="btn btn-accent"  onclick="confirmarEmprestimo()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">📚 Biblioteca<small>Área do Aluno</small></div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="showSection('catalogo')"         data-section="catalogo"><span class="icon">🔍</span><span>Catálogo</span></div>
+      <div class="nav-item"        onclick="showSection('meus-emprestimos')"  data-section="meus-emprestimos"><span class="icon">📋</span><span>Meus Empréstimos</span></div>
+      <div class="nav-item"        onclick="showSection('historico')"          data-section="historico"><span class="icon">📜</span><span>Histórico</span></div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" id="sidebar-user-info"><strong>Carregando...</strong></div>
+      <button class="btn btn-outline btn-sm" onclick="sair()">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <!-- Catálogo -->
+    <section class="page-section active" id="section-catalogo">
+      <div class="page-header"><h1>Catálogo de Livros</h1><p>Pesquise e solicite empréstimos de livros disponíveis</p></div>
+      <div class="card">
+        <div class="search-bar">
+          <input type="text" id="busca-titulo" placeholder="🔍 Buscar por título..." oninput="carregarCatalogo()" />
+          <input type="text" id="busca-autor"  placeholder="Autor..."                oninput="carregarCatalogo()" />
+          <input type="text" id="busca-isbn"   placeholder="ISBN..."                 oninput="carregarCatalogo()" />
+        </div>
+        <div id="catalogo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
+      </div>
+    </section>
+
+    <!-- Meus Empréstimos -->
+    <section class="page-section" id="section-meus-emprestimos">
+      <div class="page-header"><h1>Meus Empréstimos Ativos</h1><p>Livros atualmente sob sua posse</p></div>
+      <div id="aviso-limite" style="display:none;" class="card">
+        <p style="color:var(--warning);font-weight:600;">⚠ Você atingiu o limite de 3 empréstimos simultâneos.</p>
+      </div>
+      <div id="cards-ativos"></div>
+    </section>
+
+    <!-- Histórico -->
+    <section class="page-section" id="section-historico">
+      <div class="page-header"><h1>Histórico de Empréstimos</h1></div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Livro</th><th>Autor</th><th>Empréstimo</th><th>Prev. Devolução</th><th>Devolução</th><th>Atraso</th><th>Multa</th><th>Status</th></tr></thead>
+            <tbody id="tbody-historico"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+  redirectIfNotAuth();
+  if (getRole() === 'bibliotecario') window.location.href = '../pages/admin.html';
+
+  const user = getUser();
+  if (user) {
+    document.getElementById('sidebar-user-info').innerHTML =
+      `<strong>${user.primeiro_nome ? user.primeiro_nome + ' ' + user.sobrenome : 'Aluno'}</strong>${user.email}`;
+  }
+
+  function showSection(name) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`section-${name}`).classList.add('active');
+    document.querySelector(`[data-section="${name}"]`).classList.add('active');
+    const map = { catalogo: carregarCatalogo, 'meus-emprestimos': carregarAtivos, historico: carregarHistorico };
+    if (map[name]) map[name]();
+  }
+
+  function sair() { clearSession(); window.location.href = '../index.html'; }
+  function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  function statusBadge(e) {
+    const agora = new Date();
+    if (e.data_devolucao) return Number(e.dias_atraso) > 0 ? '<span class="badge badge-warning">Devolvido c/ Atraso</span>' : '<span class="badge badge-success">Devolvido</span>';
+    if (new Date(e.data_prevista_devolucao) < agora) return '<span class="badge badge-danger">Em Atraso</span>';
+    return '<span class="badge badge-accent">Ativo</span>';
+  }
+
+  async function carregarCatalogo() {
+    const params = new URLSearchParams();
+    const t = document.getElementById('busca-titulo')?.value; if (t) params.set('titulo', t);
+    const a = document.getElementById('busca-autor')?.value;  if (a) params.set('autor', a);
+    const i = document.getElementById('busca-isbn')?.value;   if (i) params.set('isbn', i);
+    try {
+      const livros = await apiFetch('/livros?' + params);
+      const grid = document.getElementById('catalogo-grid');
+      if (!livros.length) { grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">📭</div><p>Nenhum livro encontrado</p></div>`; return; }
+      grid.innerHTML = livros.map(l => `
+        <div class="card" style="margin:0;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+              <span class="badge ${l.exemplares_disponiveis > 0 ? 'badge-success' : 'badge-danger'}">${l.exemplares_disponiveis > 0 ? l.exemplares_disponiveis + ' disponível(is)' : 'Indisponível'}</span>
+              <span style="font-size:11px;color:var(--text-muted)">${l.ano}</span>
+            </div>
+            <h3 style="font-size:1rem;margin-bottom:4px;line-height:1.4">${l.titulo}</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:2px">por <strong>${l.autor}</strong></p>
+            ${l.editora ? `<p style="font-size:12px;color:var(--text-muted)">${l.editora}</p>` : ''}
+            <p style="font-size:11px;color:var(--text-muted);margin-top:8px;font-family:monospace">${l.isbn}</p>
+          </div>
+          <button class="btn btn-accent btn-sm" style="margin-top:16px;width:100%"
+            ${l.exemplares_disponiveis <= 0 ? 'disabled style="margin-top:16px;width:100%;opacity:.5;cursor:not-allowed"' : ''}
+            onclick="abrirModalEmprestimo(${l.id}, '${l.titulo.replace(/'/g, "\\'")}')">
+            ${l.exemplares_disponiveis > 0 ? 'Solicitar Empréstimo' : 'Sem exemplares'}
+          </button>
+        </div>`).join('');
+    } catch { showToast('Erro ao carregar catálogo', 'error'); }
+  }
+
+  function abrirModalEmprestimo(idLivro, nomeLivro) {
+    document.getElementById('modal-livro-id').value   = idLivro;
+    document.getElementById('modal-livro-nome').value = nomeLivro;
+    const d = new Date(); d.setDate(d.getDate() + 7);
+    document.getElementById('modal-data-prev').value  = d.toISOString().split('T')[0];
+    document.getElementById('modal-emprestimo').classList.add('open');
+  }
+
+  async function confirmarEmprestimo() {
+    const id_livro               = Number(document.getElementById('modal-livro-id').value);
+    const data_prevista_devolucao = document.getElementById('modal-data-prev').value;
+    const id_aluno               = getUser()?.id;
+    if (!data_prevista_devolucao) { showToast('Informe a data de devolução.', 'error'); return; }
+    showLoading(true);
+    try {
+      await apiFetch('/emprestimos', { method: 'POST', body: JSON.stringify({ id_aluno, id_livro, data_prevista_devolucao }) });
+      showToast('Empréstimo solicitado com sucesso!');
+      fecharModal('modal-emprestimo'); carregarCatalogo();
+    } catch (e) { showToast(e.message || 'Erro ao solicitar', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function carregarAtivos() {
+    showLoading(true);
+    try {
+      const emprestimos = await apiFetch('/emprestimos/meu-historico');
+      const ativos = emprestimos.filter(e => !e.data_devolucao);
+      const agora  = new Date();
+      document.getElementById('aviso-limite').style.display = ativos.length >= 3 ? 'block' : 'none';
+      const container = document.getElementById('cards-ativos');
+      if (!ativos.length) { container.innerHTML = `<div class="empty-state card"><div class="icon">📭</div><p>Você não possui empréstimos ativos.</p></div>`; return; }
+      container.innerHTML = ativos.map(e => {
+        const atrasado     = new Date(e.data_prevista_devolucao) < agora;
+        const diasRestantes = Math.ceil((new Date(e.data_prevista_devolucao) - agora) / (1000 * 60 * 60 * 24));
+        return `
+          <div class="card" style="border-left:4px solid ${atrasado ? 'var(--danger)' : 'var(--accent)'};margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+              <div>
+                <h3 style="font-size:1.1rem;margin-bottom:4px">${e.livro_titulo}</h3>
+                <p style="font-size:13px;color:var(--text-muted)">por ${e.livro_autor} — ISBN: ${e.livro_isbn}</p>
+                <p style="font-size:13px;margin-top:8px">📅 Emprestado em <strong>${formatDate(e.data_emprestimo)}</strong> — Prev. devolução: <strong>${formatDate(e.data_prevista_devolucao)}</strong></p>
+                ${atrasado
+                  ? `<p style="color:var(--danger);font-weight:600;font-size:13px;margin-top:4px">⚠ Em atraso de ${Math.abs(diasRestantes)} dia(s)</p>`
+                  : `<p style="color:var(--success);font-size:13px;margin-top:4px">✓ ${diasRestantes} dia(s) restante(s)</p>`}
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="devolverEmprestimo(${e.id})">Devolver</button>
+            </div>
+          </div>`;
+      }).join('');
+    } catch { showToast('Erro ao carregar empréstimos', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function devolverEmprestimo(id) {
+    if (!confirm('Confirmar devolução deste livro?')) return;
+    showLoading(true);
+    try {
+      const r = await apiFetch(`/emprestimos/${id}/devolver`, { method: 'PATCH' });
+      showToast(r.dias_atraso > 0 ? `Devolvido c/ atraso. Multa: ${formatCurrency(r.valor_multa)}` : 'Devolução registrada!', r.dias_atraso > 0 ? 'warning' : 'success');
+      carregarAtivos();
+    } catch (e) { showToast(e.message || 'Erro ao devolver', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  async function carregarHistorico() {
+    showLoading(true);
+    try {
+      const emprestimos = await apiFetch('/emprestimos/meu-historico');
+      document.getElementById('tbody-historico').innerHTML = emprestimos.map(e => `
+        <tr>
+          <td><strong>${e.livro_titulo}</strong></td><td>${e.livro_autor}</td>
+          <td>${formatDate(e.data_emprestimo)}</td><td>${formatDate(e.data_prevista_devolucao)}</td><td>${formatDate(e.data_devolucao)}</td>
+          <td>${Number(e.dias_atraso) > 0 ? `<span class="badge badge-danger">${e.dias_atraso}d</span>` : '0'}</td>
+          <td>${Number(e.valor_multa) > 0 ? `<span style="color:var(--danger);font-weight:600">${formatCurrency(e.valor_multa)}</span>` : '—'}</td>
+          <td>${statusBadge(e)}</td>
+        </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Nenhum empréstimo</td></tr>';
+    } catch { showToast('Erro ao carregar histórico', 'error'); }
+    finally { showLoading(false); }
+  }
+
+  carregarCatalogo();
+  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+</script>
+</body>
+</html>
