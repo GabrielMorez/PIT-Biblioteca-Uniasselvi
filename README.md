@@ -1,82 +1,130 @@
-## Projeto - Controle de Empréstimo de Livros da Biblioteca
+# 📚 Sistema de Controle de Empréstimos de Biblioteca
 
-**Objetivo:**  
-Automatizar o controle de empréstimos e devoluções de livros da biblioteca acadêmica.
-
-**Atores:** Bibliotecário, Aluno
-
-**Requisitos Funcionais:**
-
-- RF01: O sistema deve permitir ao bibliotecário cadastrar livros com ISBN, título, autor e quantidade de exemplares. (cadastrar livro) Campos: ISBN, título, autor, editora, ano, quantidade_exemplares. Regras: ISBN obrigatório e único por obra; quantidade >= 1; ano entre 1500 e ano atual.
-- RF02: O sistema deve ter uma tela de login onde será possível o aluno se cadastrar e após o cadastro realizar login. Campos: primeiro nome, sobrenome, documento, telefone, e-mail, senha. Regras: o e-mai e documento deverão ser únicos, a senha deve ser armazenada criptografada.
-- RF03: O sistema deve registrar empréstimo vinculando aluno, exemplar, data de empréstimo e data prevista de devolução. (registrar empréstimo) Campos: id_aluno, id_exemplar, data_emprestimo, data_prevista_devolução. Regras: aluno e exemplar obrigatórios; data_prevista > data_emprestimo; exemplar deve estar disponível.
-- RF04: O sistema deve calcular automaticamente dias de atraso no momento da devolução. (calcular atraso) Campos: data_prevista_devolução, data_devolução, dias_atraso. Regras: dias_atraso = max(0, devolução - prevista); cálculo automático e imutável após fechamento; caso a data_devolução esteja preenchida entende-se que o livro foi devolvido.
-- RF05: O sistema deve bloquear novo empréstimo quando o aluno atingir o limite fixo de 3 itens simultâneos (limite de itens). Regras: bloquear novo empréstimo quando o aluno já possuir 3 livros sob sua posse; regra deve considerar apenas empréstimos com data_devolucao "is null".
-- RF06: O sistema deve gerar relatório de empréstimos por período com totais de ativos, devolvidos e atrasados. (relatório) Campos: período_início, período_fim, totais_ativos, totais_devolvidos, totais_atrasados. Regras: período obrigatório e válido; relatório deve considerar timezone institucional e filtros auditáveis.
-- RF07: O sistema deve calcular e registrar multa por atraso conforme tabela de regras configurada. (multa por atraso) Campos: dias_atraso, valor_diário, teto_multa, valor_total_multa. Regras: cálculo automático conforme tabela vigente; valor_total = min(dias_atraso * valor_diário, teto_multa).
-
-**Requisitos Não Funcionais:**
-
-- RNF01: O sistema deve armazenar as senhas dos usuários utilizando criptografia segura (hash), garantindo que não sejam armazenadas em texto puro.
-- RNF02: O sistema deve responder às operações comuns (login, cadastro, consulta de livros e registro de empréstimo) em até 3 segundos em condições normais de uso.
-- RNF03: O sistema deve apresentar um indicador visual de carregamento (loading) sempre que uma operação demorada estiver sendo executada, garantindo feedback ao usuário.
-- RNF04: O sistema deve garantir integridade dos dados, impedindo inconsistências como empréstimos duplicados ou exemplares emprestados simultaneamente para mais de um aluno.
-
-**Requisitos Não Funcionais Gerais:**
-
-- RNG01: O sistema deve ser executado on premise, sendo instalado e mantido na infraestrutura da instituição.
-- RNG02: O sistema deve ser desenvolvido utilizando Typescript e Node.js para a API e HTML, CSS e Tailwind CSS para o frontend.
-- RNF03: O sistema deve possuir interface responsiva, permitindo utilização adequada em dispositivos desktop e mobile.
-
-**Casos de uso / Funcionalidades:**
-- F01 – Busca de livros
-   - Permite ao aluno pesquisar livros disponíveis na biblioteca utilizando filtros como título, autor ou ISBN.
-   - *Relacionamento: RF01*
-- F02 – Reserva de livros
-   - Permite que alunos reservem livros quando não houver exemplares disponíveis.
-   - *Relacionamento: RF03*
-- F03 – Histórico de empréstimos
-   - Permite ao aluno visualizar todos os seus empréstimos realizados.
-   - *Relacionamento: RF03, RF04*
-- F04 – Devolução do livro
-   - Permite ao aluno devolver o livro, gerar custos se atraso.
-   - *Relacionamento: RF04*
-- F05 – Dashboard administrativo (opcional)
-   - Permite ao bibliotecário visualizar estatísticas de empréstimos e atrasos.
-   - *Relacionamento: RF06*
-- F06 – Notificação de devolução (opcional)
-   - O sistema envia lembretes sobre datas de devolução próximas.
-   - *Relacionamento: RF04*
-
-**DoR (Definition of Ready):**
-
-- Requisito funcional relacionado identificado (RF)
-- Critérios de aceitação definidos e testáveis
-- Dependências e dados necessários mapeados
-
-**DoD (Definition of Done):**
-
-- Funcionalidade implementada conforme os RFs vinculados
-- Critérios de aceitação atendidos
-- Testes funcionais executados com sucesso
-- Evidências registradas (prints/logs/resultados)
-
-- Cadastrar livros (RF01)
-- Login / Cadastro de alunos (RF02)
-- Registrar empréstimos com regras de disponibilidade e limite fixo (RF03, RF05)
-- Registrar devoluções com cálculo automático de atraso e multa (RF04, RF07)
-- Emitir relatórios de empréstimos por período (RF06)
-
-**Plano de Testes:**
-
-- Testar cadastro de livros com dados válidos e inválidos
-- Validar consulta de livros disponíveis (data_devolucao nula)
-- Verificar registro de empréstimo e atualização de disponibilidade
-- Testar devolução e liberação do exemplar
-- Validar cálculo correto de dias de atraso
-- Verificar limite máximo de empréstimos por aluno
-- Testar bloqueio de novo empréstimo quando limite atingido
-- Validar empréstimos simultâneos de exemplares diferentes
+Sistema completo para gerenciamento de empréstimos de livros, com API REST em Node.js/TypeScript + PostgreSQL e frontend em HTML/CSS puro.
 
 ---
 
+## 🗂 Estrutura do Projeto
+
+```
+biblioteca/
+├── api/
+│   ├── src/
+│   │   ├── config/database.ts        # Pool PostgreSQL + inicialização das tabelas
+│   │   ├── models/
+│   │   │   ├── LivroModel.ts
+│   │   │   ├── AlunoModel.ts
+│   │   │   └── EmprestimoModel.ts
+│   │   ├── controllers/
+│   │   │   ├── AuthController.ts
+│   │   │   ├── LivroController.ts
+│   │   │   └── EmprestimoController.ts
+│   │   ├── middlewares/auth.ts       # JWT + roles
+│   │   ├── routes/index.ts
+│   │   └── index.ts
+│   ├── .env.example
+│   ├── package.json
+│   └── tsconfig.json
+└── frontend/
+    ├── index.html         # Login / Cadastro
+    ├── pages/
+    │   ├── admin.html     # Painel Bibliotecário
+    │   └── aluno.html     # Área do Aluno
+    ├── css/style.css
+    └── js/api.js
+```
+
+---
+
+## 🚀 Como Executar
+
+### 1. Subir o PostgreSQL (via Docker)
+
+```bash
+docker run -d \
+  --name biblioteca-pg \
+  -e POSTGRES_DB=biblioteca \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  postgres:16
+```
+
+### 2. Configurar variáveis de ambiente
+
+```bash
+cd api
+cp .env.example .env
+# Edite o .env com suas configurações se necessário
+```
+
+### 3. Instalar dependências e iniciar a API
+
+```bash
+cd api
+npm install
+npm run dev       # desenvolvimento (hot reload)
+# ou
+npm run build && npm start   # produção
+```
+
+A API sobe em: `http://localhost:3000`  
+As tabelas são criadas automaticamente na primeira execução.
+
+### 4. Servir o Frontend
+
+```bash
+cd frontend
+npx serve .
+# ou: python3 -m http.server 8080
+```
+
+---
+
+## 🔑 Acesso Padrão
+
+| Perfil        | E-mail                  | Senha    |
+|---------------|-------------------------|----------|
+| Bibliotecário | admin@biblioteca.com    | admin123 |
+| Aluno         | (cadastre-se na tela)   | —        |
+
+Altere as credenciais em produção via variáveis de ambiente no `.env`.
+
+---
+
+## 📡 Endpoints da API
+
+| Método | Rota                            | Auth      |
+|--------|---------------------------------|-----------|
+| POST   | /api/auth/cadastro              | Público   |
+| POST   | /api/auth/login                 | Público   |
+| GET    | /api/auth/perfil                | ✅        |
+| GET    | /api/livros                     | Público   |
+| POST   | /api/livros                     | Admin     |
+| PUT    | /api/livros/:id                 | Admin     |
+| DELETE | /api/livros/:id                 | Admin     |
+| GET    | /api/emprestimos                | Admin     |
+| GET    | /api/emprestimos/relatorio      | Admin     |
+| GET    | /api/emprestimos/meu-historico  | Aluno     |
+| POST   | /api/emprestimos                | ✅        |
+| PATCH  | /api/emprestimos/:id/devolver   | ✅        |
+| GET    | /api/config/multa               | ✅        |
+| PUT    | /api/config/multa               | Admin     |
+| GET    | /api/alunos                     | Admin     |
+
+---
+
+## ✅ Requisitos Atendidos
+
+| RF    | Descrição                              | ✅ |
+|-------|----------------------------------------|----|
+| RF01  | Cadastro de livros com validação       | ✅ |
+| RF02  | Login e cadastro de alunos             | ✅ |
+| RF03  | Registro de empréstimos                | ✅ |
+| RF04  | Cálculo automático de atraso           | ✅ |
+| RF05  | Limite de 3 empréstimos simultâneos    | ✅ |
+| RF06  | Relatório por período                  | ✅ |
+| RF07  | Multa configurável com teto            | ✅ |
+| RNF01 | Senhas criptografadas (bcrypt)         | ✅ |
+| RNF03 | Loading indicator                      | ✅ |
+| RNF04 | Integridade via FK e constraints       | ✅ |
