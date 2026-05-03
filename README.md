@@ -8,9 +8,10 @@ Sistema completo para gerenciamento de empréstimos de livros, com API REST em N
 
 ```
 biblioteca/
+├── docker-compose.yml            
 ├── api/
 │   ├── src/
-│   │   ├── config/database.ts        # Pool PostgreSQL + inicialização das tabelas
+│   │   ├── config/database.ts     
 │   │   ├── models/
 │   │   │   ├── LivroModel.ts
 │   │   │   ├── AlunoModel.ts
@@ -19,17 +20,17 @@ biblioteca/
 │   │   │   ├── AuthController.ts
 │   │   │   ├── LivroController.ts
 │   │   │   └── EmprestimoController.ts
-│   │   ├── middlewares/auth.ts       # JWT + roles
+│   │   ├── middlewares/auth.ts   
 │   │   ├── routes/index.ts
 │   │   └── index.ts
 │   ├── .env.example
 │   ├── package.json
 │   └── tsconfig.json
 └── frontend/
-    ├── index.html         # Login / Cadastro
+    ├── index.html                 
     ├── pages/
-    │   ├── admin.html     # Painel Bibliotecário
-    │   └── aluno.html     # Área do Aluno
+    │   ├── admin.html             
+    │   └── aluno.html             
     ├── css/style.css
     └── js/api.js
 ```
@@ -38,93 +39,131 @@ biblioteca/
 
 ## 🚀 Como Executar
 
-### 1. Subir o PostgreSQL (via Docker)
+### Pré-requisitos
+
+- [Node.js 18+](https://nodejs.org/)
+- [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/)
+
+---
+
+### 1. Subir o banco de dados
+
+Na raiz do projeto (onde está o `docker-compose.yml`):
 
 ```bash
-docker run -d \
-  --name biblioteca-pg \
-  -e POSTGRES_DB=biblioteca \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -p 5432:5432 \
-  postgres:16
+docker compose up -d
 ```
 
-### 2. Configurar variáveis de ambiente
+Para verificar se o container está saudável:
+
+```bash
+docker compose ps
+```
+
+Para acompanhar os logs do banco:
+
+```bash
+docker compose logs -f postgres
+```
+
+---
+
+### 2. Configurar variáveis de ambiente da API
 
 ```bash
 cd api
 cp .env.example .env
-# Edite o .env com suas configurações se necessário
 ```
+
+Os valores padrão do `.env.example` já são compatíveis com o `docker-compose.yml`, então nenhuma alteração é necessária para rodar localmente.
+
+---
 
 ### 3. Instalar dependências e iniciar a API
 
 ```bash
 cd api
 npm install
-npm run dev       # desenvolvimento (hot reload)
-# ou
-npm run build && npm start   # produção
+npm run dev
 ```
 
-A API sobe em: `http://localhost:3000`  
-As tabelas são criadas automaticamente na primeira execução.
+> As tabelas do banco são criadas automaticamente na primeira execução.
+
+A API estará disponível em: **http://localhost:3000**
+
+---
 
 ### 4. Servir o Frontend
+
+Em outro terminal, a partir da pasta `frontend`:
 
 ```bash
 cd frontend
 npx serve .
-# ou: python3 -m http.server 8080
+```
+
+O frontend estará disponível em: **http://localhost:3000** (porta indicada pelo `serve`).
+
+---
+
+### Parar o banco de dados
+
+```bash
+docker compose down
+```
+
+Para remover também o volume com os dados:
+
+```bash
+docker compose down -v
 ```
 
 ---
 
 ## 🔑 Acesso Padrão
 
-| Perfil        | E-mail                  | Senha    |
-|---------------|-------------------------|----------|
-| Bibliotecário | admin@biblioteca.com    | admin123 |
-| Aluno         | (cadastre-se na tela)   | —        |
+| Perfil        | E-mail               | Senha    |
+|---------------|----------------------|----------|
+| Bibliotecário | admin@biblioteca.com | admin123 |
+| Aluno         | (cadastre-se na tela)| —        |
 
-Altere as credenciais em produção via variáveis de ambiente no `.env`.
+> Altere as credenciais em produção via variáveis de ambiente no `.env`.
 
 ---
 
 ## 📡 Endpoints da API
 
-| Método | Rota                            | Auth      |
-|--------|---------------------------------|-----------|
-| POST   | /api/auth/cadastro              | Público   |
-| POST   | /api/auth/login                 | Público   |
-| GET    | /api/auth/perfil                | ✅        |
-| GET    | /api/livros                     | Público   |
-| POST   | /api/livros                     | Admin     |
-| PUT    | /api/livros/:id                 | Admin     |
-| DELETE | /api/livros/:id                 | Admin     |
-| GET    | /api/emprestimos                | Admin     |
-| GET    | /api/emprestimos/relatorio      | Admin     |
-| GET    | /api/emprestimos/meu-historico  | Aluno     |
-| POST   | /api/emprestimos                | ✅        |
-| PATCH  | /api/emprestimos/:id/devolver   | ✅        |
-| GET    | /api/config/multa               | ✅        |
-| PUT    | /api/config/multa               | Admin     |
-| GET    | /api/alunos                     | Admin     |
+| Método | Rota                           | Auth    |
+|--------|--------------------------------|---------|
+| POST   | /api/auth/cadastro             | Público |
+| POST   | /api/auth/login                | Público |
+| GET    | /api/auth/perfil               | ✅      |
+| GET    | /api/livros                    | Público |
+| POST   | /api/livros                    | Admin   |
+| PUT    | /api/livros/:id                | Admin   |
+| DELETE | /api/livros/:id                | Admin   |
+| GET    | /api/emprestimos               | Admin   |
+| GET    | /api/emprestimos/relatorio     | Admin   |
+| GET    | /api/emprestimos/meu-historico | Aluno   |
+| POST   | /api/emprestimos               | ✅      |
+| PATCH  | /api/emprestimos/:id/devolver  | ✅      |
+| GET    | /api/config/multa              | ✅      |
+| PUT    | /api/config/multa              | Admin   |
+| GET    | /api/alunos                    | Admin   |
 
 ---
 
 ## ✅ Requisitos Atendidos
 
-| RF    | Descrição                              | ✅ |
-|-------|----------------------------------------|----|
-| RF01  | Cadastro de livros com validação       | ✅ |
-| RF02  | Login e cadastro de alunos             | ✅ |
-| RF03  | Registro de empréstimos                | ✅ |
-| RF04  | Cálculo automático de atraso           | ✅ |
-| RF05  | Limite de 3 empréstimos simultâneos    | ✅ |
-| RF06  | Relatório por período                  | ✅ |
-| RF07  | Multa configurável com teto            | ✅ |
-| RNF01 | Senhas criptografadas (bcrypt)         | ✅ |
-| RNF03 | Loading indicator                      | ✅ |
-| RNF04 | Integridade via FK e constraints       | ✅ |
+| RF    | Descrição                           | ✅ |
+|-------|-------------------------------------|----|
+| RF01  | Cadastro de livros com validação    | ✅ |
+| RF02  | Login e cadastro de alunos          | ✅ |
+| RF03  | Registro de empréstimos             | ✅ |
+| RF04  | Cálculo automático de atraso        | ✅ |
+| RF05  | Limite de 3 empréstimos simultâneos | ✅ |
+| RF06  | Relatório por período               | ✅ |
+| RF07  | Multa configurável com teto         | ✅ |
+| RNF01 | Senhas criptografadas (bcrypt)      | ✅ |
+| RNF03 | Loading indicator                   | ✅ |
+| RNF04 | Integridade via FK e constraints    | ✅ |

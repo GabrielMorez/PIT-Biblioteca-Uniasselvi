@@ -3,9 +3,9 @@ import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 const pool = new Pool({
   host:     process.env.DB_HOST     || 'localhost',
   port:     Number(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME     || 'biblioteca',
-  user:     process.env.DB_USER     || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  database: process.env.POSTGRES_DB     || 'biblioteca',
+  user:     process.env.POSTGRES_USER     || 'postgres',
+  password: process.env.POSTGRES_PASSWORD || 'postgres',
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
