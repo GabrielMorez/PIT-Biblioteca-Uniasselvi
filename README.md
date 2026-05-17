@@ -108,6 +108,7 @@ O frontend estará disponível em: **http://localhost:3000** (porta indicada pel
 ```bash
 npx serve -l 8080 .
 ```
+O frontend estará disponível em: **http://localhost:8080**
 
 ---
 
