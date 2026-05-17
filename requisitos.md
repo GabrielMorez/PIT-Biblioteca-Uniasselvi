@@ -24,9 +24,10 @@ Automatizar o controle de empréstimos e devoluções de livros da biblioteca ac
 
 **Requisitos Não Funcionais Gerais:**
 
-- RNG01: O sistema deve ser executado on premise, sendo instalado e mantido na infraestrutura da instituição.
+- RNG01: O sistema deve ser executado em servidor próprio, sendo instalado, hospedado e mantido na infraestrutura da instituição.
 - RNG02: O sistema deve ser desenvolvido utilizando Typescript e Node.js para a API e HTML, CSS e Tailwind CSS para o frontend.
-- RNF03: O sistema deve possuir interface responsiva, permitindo utilização adequada em dispositivos desktop e mobile.
+- RNG03: O sistema deve possuir interface responsiva, permitindo utilização adequada em dispositivos desktop e mobile.
+- RNG04: O sistema deve utilizar o banco de dados PostgreSQL para o armazenamento e gerenciamento de todos os dados da aplicação.
 
 **Casos de uso / Funcionalidades:**
 - F01 – Busca de livros
