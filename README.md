@@ -104,6 +104,11 @@ npx serve .
 
 O frontend estará disponível em: **http://localhost:3000** (porta indicada pelo `serve`).
 
+* Caso der erro na execução relacionado à porta em uso, tente direcionar a outra porta.
+```bash
+npx serve -l 8080 .
+```
+
 ---
 
 ### Parar o banco de dados
