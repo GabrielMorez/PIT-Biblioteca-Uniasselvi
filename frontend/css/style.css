@@ -88,8 +88,8 @@ h1, h2, h3 { font-family: 'Playfair Display', serif; }
 .btn-primary:hover { background: #2c2c40; transform: translateY(-1px); }
 .btn-accent { background: var(--accent); color: var(--text); }
 .btn-accent:hover { background: var(--accent-dark); transform: translateY(-1px); }
-.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
-.btn-outline:hover { border-color: var(--text); }
+.btn-outline { background: #2c2c40; border: 1.5px solid #0056b3; color: #ffffff; }
+.btn-outline:hover { border-color: #004085; }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #a93226; }
 .btn-sm { padding: 7px 14px; font-size: 13px; }
